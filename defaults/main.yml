@@ -2,3 +2,7 @@
 jenkins_cli_destination: /usr/share/jenkins/
 jenkins_plugins: []
 jenkins_package_dependencies: []
+# AWS
+jenkins_aws_access: null
+jenkins_aws_secret: null
+jenkins_domain: null

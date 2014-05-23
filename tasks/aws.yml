@@ -28,6 +28,7 @@
   sudo_user: jenkins
   command: "s3cmd --config=/var/lib/jenkins/.s3cfg --force --recursive get s3://jenkins.{{ jenkins_domain }}/.ssh/ /var/lib/jenkins/.ssh"
   when: jenkins_aws_access is defined and jenkins_aws_access != None
+  register: ssh_updated
   tags:
     - ssh
     - jenkins
@@ -37,6 +38,7 @@
     path=/var/lib/jenkins/.ssh/id_rsa
     mode=600
     state=file
+  when: ssh_updated|changed
 
 # Create service to watch .ssh files on master only
 - name: configure s3 watcher template for .ssh folder

@@ -15,7 +15,7 @@
     - bitbucket
 
 - debug: var=jenkins_keys
-  when: jenkins_keys is defined
+  when: jenkins_keys|changed
 
 # Compare current key with keys
 # if key does not exist add it to bitbucket with date added in label.

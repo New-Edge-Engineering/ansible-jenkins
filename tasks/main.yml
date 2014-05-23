@@ -30,9 +30,8 @@
 # Install packages plugins depend on
 - name: install package dependentices
   apt:
-    pkg=jenkins
+    pkg={{ item }}
     state=latest
-    update_cache=yes
   with_items: jenkins_package_dependencies
   when: jenkins_package_dependencies|length > 0
   tags:

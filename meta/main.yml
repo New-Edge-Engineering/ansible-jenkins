@@ -15,4 +15,4 @@ galaxy_info:
   - development
 
 dependencies:
-  - openjdk7
+  - neel.openjdk7
