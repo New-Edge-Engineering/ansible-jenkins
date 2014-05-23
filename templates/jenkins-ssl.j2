@@ -1,0 +1,29 @@
+#
+# WARNING: Ansible generated file.
+#          Any manual changes may get automatically replaced.
+#
+server {
+  listen                443;
+  server_name           jenkins.{{ domain }};
+  client_max_body_size  10m;
+  ssl on;
+  ssl_certificate       {{ ssl_directory }}/{{ ssl_certificate_file }};
+  ssl_certificate_key   {{ ssl_directory }}/{{ ssl_certificate_key }};
+  error_log             /var/log/nginx/jenkins.{{ domain }}.error.log;
+  access_log            /var/log/nginx/jenkins.{{ domain }}.access.log;
+  
+  location ~* ^/(login|j_acegi_security_check|loginError) {
+    proxy_pass          http://127.0.0.1:8080;
+    proxy_set_header    X-Real-IP $remote_addr;
+    proxy_set_header    X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header    Host $http_host;
+    proxy_redirect      off;
+  }
+  
+  location / {
+    if ($request_method ~ ^(HEAD)$ ) {
+         return 200;
+    }
+    return 301 http://$host$request_uri;
+  }
+}

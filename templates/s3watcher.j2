@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+location={{ item.root }}
+inotifywait -mr --timefmt '%d/%m/%y %H:%M' --format '%T %w %f' -e close_write $location | while read date time dir file; do
+  if [[ "$dir" == *{{ item.directory }}* ]]; then
+    suffix=${dir#$location}
+    s3cmd -c /var/lib/jenkins/.s3cfg sync $dir s3://{{ item.bucket }}/$suffix > /var/log/s3uploads.log 2>&1
+  fi
+done

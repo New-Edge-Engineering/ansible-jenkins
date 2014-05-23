@@ -1,0 +1,49 @@
+---
+# Install repository
+- include: repository.yml
+# Install server
+- name: ensure jenkins is installed
+  apt:
+    pkg=jenkins
+    state=latest
+    update_cache=yes
+  register: jenkins_install
+  notify:
+    - restart jenkins
+  tags:
+    - packages
+    - jenkins
+# Set up (user) and group
+- name: add jenkins group
+  group: name=jenkins
+  tags:
+    - jenkins
+- name: add group to user
+  user:
+    name=jenkins
+    append=yes
+    group=jenkins
+# Install cli
+- include: cli.yml
+# Update the installation
+- include: update.yml
+# Install packages plugins depend on
+- name: install package dependentices
+  apt:
+    pkg=jenkins
+    state=latest
+    update_cache=yes
+  with_items: jenkins_package_dependencies
+  when: jenkins_package_dependencies|length > 0
+  tags:
+    - packages
+    - jenkins
+# Install plugins
+- include: plugins.yml
+  when: jenkins_plugins|length > 0
+# aws backup
+- include: aws.yml
+# credentials
+- include: ssh.yml
+# git repository support
+- include: bitbucket.yml

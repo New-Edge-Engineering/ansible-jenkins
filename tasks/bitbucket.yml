@@ -1,0 +1,21 @@
+---
+# TODO: Nice to have, automatic registration of jenkins ssh key with bitbucket account.
+# manage ssh keys within bitbucket to ensure jenkins can access repositories
+- name: get current bitbucket keys
+  uri:
+    url=https://bitbucket.org/api/1.0/users/newedgeengineering_jenkins/ssh-keys/
+    user={{ jenkins_bitbucket_username }}
+    password={{ jenkins_bitbucket_password }}
+    return_content=yes
+  register: jenkins_keys
+  when: jenkins_bitbucket_username is defined and jenkins_bitbucket_password is defined
+  tags:
+    - jenkins
+    - ssh
+    - bitbucket
+
+- debug: var=jenkins_keys
+  when: jenkins_keys is defined
+
+# Compare current key with keys
+# if key does not exist add it to bitbucket with date added in label.

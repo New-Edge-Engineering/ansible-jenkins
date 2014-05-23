@@ -1,0 +1,54 @@
+---
+# Ensure Anonymous has security access to overall administration, read and 
+#   upload plugins before running
+
+- name: check who am i
+  shell: "jenkins-cli who-am-i"
+  sudo_user: jenkins
+  register: jenkins_who_am_i
+  tags:
+    - jenkins
+
+- debug: var=jenkins_who_am_i.stdout
+  tags:
+    - jenkins
+
+# Start the process
+- name: List plugins
+  shell: "jenkins-cli list-plugins | cut -f 1 -d ' '"
+  sudo_user: jenkins
+  when: jenkins_plugins is defined
+  register: plugins_installed
+  tags:
+    - jenkins
+    - plugins
+
+# Install/update Jenkins plugins
+- name: Install/update plugins
+  command: jenkins-cli install-plugin {{ item }}
+  sudo_user: jenkins
+  when: plugins_installed.changed and plugins_installed.stdout.find('{{ item }}') == -1
+  with_items: jenkins_plugins
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+    - plugins
+
+- name: List plugins to be updated
+  shell: jenkins-cli list-plugins | grep ')$' | cut -f 1 -d ' ' | sed ':a;N;$!ba;s/\n/ /g'
+  sudo_user: jenkins
+  register: plugins_updates
+  tags:
+    - jenkins
+    - plugins
+
+- name: Update plugins
+  command: jenkins-cli install-plugin {{ plugins_updates.stdout }}
+  sudo_user: jenkins
+  when: plugins_updates.stdout != ''
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+    - plugins

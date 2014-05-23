@@ -1,0 +1,29 @@
+#
+# WARNING: Ansible generated file.
+#          Any manual changes may get automatically replaced.
+#
+server {
+  listen                80;
+  server_name           jenkins.{{ domain }};
+  client_max_body_size  10m;
+  error_log             /var/log/nginx/jenkins.{{ domain }}.error.log;
+  access_log            /var/log/nginx/jenkins.{{ domain }}.access.log;
+
+  location /login {
+    return 301 https://$host$request_uri;
+  }
+
+  location / {
+    # For haproxy https connection check
+    if ($request_method ~ ^(OPTIONS|HEAD)$ ) {
+      add_header Content-Length 0;
+      add_header Content-Type text/plain;
+      return 200;
+    }
+    proxy_pass          http://127.0.0.1:8080;
+    proxy_set_header    X-Real-IP $remote_addr;
+    proxy_set_header    X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header    Host $http_host;
+    proxy_redirect      off;
+  }
+}

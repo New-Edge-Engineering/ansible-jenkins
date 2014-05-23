@@ -1,0 +1,27 @@
+#!/bin/sh
+
+JENKINS_LIB={{ jenkins_cli_destination }}
+
+# Check local environment first for override
+if [ "$JENKINS_URL" = "" ]
+then
+    # Check global configuration first
+    if [ -f /etc/jenkins/cli.conf ]
+    then
+        . /etc/jenkins/cli.conf
+    fi
+
+    # Override with local user configuration 
+    if [ -f ${HOME}/.jenkins/cli.conf ]
+    then
+        . ${HOME}/.jenkins/cli.conf
+    fi
+fi
+
+# If URL is set then export for Java process
+if [ "$JENKINS_URL" != "" ]
+then
+    export JENKINS_URL
+fi
+
+java -jar ${JENKINS_LIB}/jenkins-cli.jar "$@"
