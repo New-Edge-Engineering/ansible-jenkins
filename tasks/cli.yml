@@ -12,7 +12,7 @@
     - jenkins
 
 # Create Jenkins CLI destination directory
-- name: "create jenkins cli destination directory: {{ jenkins_cli_destination }}"
+- name: "create jenkins cli destination directory"
   file:
     path={{ jenkins_cli_destination }}
     state=directory
