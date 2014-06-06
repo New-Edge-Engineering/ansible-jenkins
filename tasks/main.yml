@@ -40,8 +40,6 @@
 # Install plugins
 - include: plugins.yml
   when: jenkins_plugins|length > 0
-# aws backup
-- include: aws.yml
 # credentials
 - include: ssh.yml
 # git repository support
