@@ -3,7 +3,7 @@
 # assuming 60s should be sufficiant
 - name: wait for jenkins to start
   wait_for:
-    delay=60
+    delay=300
     port=8080
     search_regex="Build History"
   when: jenkins_install|changed
