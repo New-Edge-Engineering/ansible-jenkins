@@ -15,4 +15,4 @@ galaxy_info:
   - development
 
 dependencies:
-  - neel.openjdk7
+  - role: smola.java
