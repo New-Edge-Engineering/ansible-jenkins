@@ -5,7 +5,7 @@
   wait_for:
     delay=600
     port=8080
-    search_regex="Build History"
+    search_regex="(>Build History<)"
   when: jenkins_install|changed
   tags:
     - install
