@@ -1,12 +1,23 @@
 ---
 # If Jenkins is installed or updated, wait for pulling the Jenkins CLI,
 # assuming 60s should be sufficiant
+- name: secure wait for jenkins to start
+  wait_for:
+    host: "{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@localhost"
+    delay: 600
+    port: 8080
+    search_regex: "(>Build History<)"
+  when: jenkins_install|changed and jenkins_secure_id is defined and jenkins_secure_api is defined
+  tags:
+    - install
+    - jenkins
+
 - name: wait for jenkins to start
   wait_for:
-    delay=600
-    port=8080
-    search_regex="(>Build History<)"
-  when: jenkins_install|changed
+    delay: 600
+    port: 8080
+    search_regex: "(>Build History<)"
+  when: jenkins_install|changed and jenkins_secure_id is not defined and jenkins_secure_api is not defined
   tags:
     - install
     - jenkins
