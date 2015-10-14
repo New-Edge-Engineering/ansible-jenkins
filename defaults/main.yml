@@ -1,5 +1,5 @@
 ---
-jenkins_cli_destination: /usr/share/jenkins/
+jenkins_cli_destination: /usr/share/jenkins
 jenkins_plugins: []
 jenkins_package_dependencies: []
 # AWS

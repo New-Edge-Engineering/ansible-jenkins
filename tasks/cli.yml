@@ -1,26 +1,40 @@
 ---
-# If Jenkins is installed or updated, wait for pulling the Jenkins CLI,
-# assuming 60s should be sufficiant
-- name: secure wait for jenkins to start
-  wait_for:
-    host: "{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@localhost"
-    delay: 60
-    port: 8080
-    search_regex: "Build History"
+- name: CLI | Ensure jenkins has started
+  get_url:
+    url: http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/cli/
+    validate_certs: no
+  register: secure_jenkins_result
+  until: secure_jenkins_result.stdout.find("200 OK") != -1
+  retries: "8"
+  delay: "15"
+  changed_when: false
   when: jenkins_install|changed and jenkins_secure_id is defined and jenkins_secure_api is defined
   tags:
     - install
     - jenkins
 
-- name: wait for jenkins to start
-  wait_for:
-    delay: 60
-    port: 8080
-    search_regex: "Build History"
+- name: CLI | Ensure jenkins has started
+  get_url:
+    url: http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/cli/
+    validate_certs: no
+  register: jenkins_result
+  until: jenkins_result.stdout.find("200 OK") != -1
+  retries: "8"
+  delay: "15"
+  changed_when: false
   when: jenkins_install|changed and jenkins_secure_id is not defined and jenkins_secure_api is not defined
   tags:
     - install
     - jenkins
+
+- name: CLI | Ensure jenkins has started
+  get_url:
+    url: http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/cli/
+    validate_certs: no
+    dest: /dev/null
+  register: jenkins_result_check
+
+- debug: var=jenkins_result_check
 
 # Create Jenkins CLI destination directory
 - name: "create jenkins cli destination directory"
@@ -32,12 +46,24 @@
     - jenkins
 
 # Get Jenkins CLI from localhost
-- name: get Jenkins cli
+- name: CLI | Ensure jar is installed
   get_url:
-    url=http://localhost:8080/jnlpJars/jenkins-cli.jar
-    dest={{ jenkins_cli_destination }}
+    url=http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/jnlpJars/jenkins-cli.jar
+    dest={{ jenkins_cli_destination }}/
     owner=jenkins
     mode=0440
+  when: jenkins_secure_id is defined and jenkins_secure_api is defined
+  tags:
+    - package
+    - jenkins
+
+- name: get Jenkins cli
+  get_url:
+    url=http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar
+    dest={{ jenkins_cli_destination }}/
+    owner=jenkins
+    mode=0440
+  when: jenkins_secure_id is not defined and jenkins_secure_api is not defined
   tags:
     - package
     - jenkins

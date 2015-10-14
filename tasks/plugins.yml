@@ -13,6 +13,7 @@
 - debug: var=jenkins_who_am_i.stdout
   tags:
     - jenkins
+    - debug
 
 # Start the process
 - name: List plugins
