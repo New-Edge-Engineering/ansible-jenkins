@@ -4,7 +4,7 @@
     url: http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/cli/
     validate_certs: no
   register: secure_jenkins_result
-  until: secure_jenkins_result.stdout.find("200 OK") != -1
+  until: secure_jenkins_result.msg.find("200 OK") != -1
   retries: "8"
   delay: "15"
   changed_when: false
@@ -15,10 +15,10 @@
 
 - name: CLI | Ensure jenkins has started
   get_url:
-    url: http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/cli/
+    url: http://127.0.0.1:8080/cli/
     validate_certs: no
   register: jenkins_result
-  until: jenkins_result.stdout.find("200 OK") != -1
+  until: jenkins_result.msg.find("200 OK") != -1
   retries: "8"
   delay: "15"
   changed_when: false
@@ -26,15 +26,6 @@
   tags:
     - install
     - jenkins
-
-- name: CLI | Ensure jenkins has started
-  get_url:
-    url: http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/cli/
-    validate_certs: no
-    dest: /dev/null
-  register: jenkins_result_check
-
-- debug: var=jenkins_result_check
 
 # Create Jenkins CLI destination directory
 - name: "create jenkins cli destination directory"
