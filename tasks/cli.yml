@@ -1,7 +1,8 @@
 ---
 - name: CLI | Ensure jenkins has started
   get_url:
-    url: http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/cli/
+    url: "http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/cli/"
+    dest: /dev/null
     validate_certs: no
   register: secure_jenkins_result
   until: secure_jenkins_result.msg.find("200 OK") != -1
@@ -16,6 +17,7 @@
 - name: CLI | Ensure jenkins has started
   get_url:
     url: http://127.0.0.1:8080/cli/
+    dest: /dev/null
     validate_certs: no
   register: jenkins_result
   until: jenkins_result.msg.find("200 OK") != -1
@@ -30,8 +32,8 @@
 # Create Jenkins CLI destination directory
 - name: "create jenkins cli destination directory"
   file:
-    path={{ jenkins_cli_destination }}
-    state=directory
+    path: "{{ jenkins_cli_destination }}"
+    state: directory
   tags:
     - package
     - jenkins
@@ -39,10 +41,10 @@
 # Get Jenkins CLI from localhost
 - name: CLI | Ensure jar is installed
   get_url:
-    url=http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/jnlpJars/jenkins-cli.jar
-    dest={{ jenkins_cli_destination }}/
-    owner=jenkins
-    mode=0440
+    url: "http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/jnlpJars/jenkins-cli.jar"
+    dest: "{{ jenkins_cli_destination }}/"
+    owner: jenkins
+    mode: 0440
   when: jenkins_secure_id is defined and jenkins_secure_api is defined
   tags:
     - package
@@ -50,10 +52,10 @@
 
 - name: get Jenkins cli
   get_url:
-    url=http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar
-    dest={{ jenkins_cli_destination }}/
-    owner=jenkins
-    mode=0440
+    url: http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar
+    dest: "{{ jenkins_cli_destination }}/"
+    owner: jenkins
+    mode: 0440
   when: jenkins_secure_id is not defined and jenkins_secure_api is not defined
   tags:
     - package
@@ -62,26 +64,26 @@
 # Set up jenkins-cli executable script
 - name: create jenkins-cli executable script
   template:
-    dest=/usr/bin/jenkins-cli
-    src=jenkins-cli.j2
-    mode=0755
+    dest: /usr/bin/jenkins-cli
+    src: jenkins-cli.j2
+    mode: 0755
   tags:
     - package
     - jenkins
 
 - name: "create jenkins cli configuration directory"
   file:
-    path=/etc/jenkins
-    state=directory
+    path: /etc/jenkins
+    state: directory
   tags:
     - package
     - jenkins
 
 - name: create jenkins-cli configuration
   copy:
-    dest=/etc/jenkins/cli.conf
-    src=cli.conf
-    mode=0644
+    dest: /etc/jenkins/cli.conf
+    src: cli.conf
+    mode: 0644
   tags:
     - package
     - jenkins
