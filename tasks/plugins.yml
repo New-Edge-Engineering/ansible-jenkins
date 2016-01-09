@@ -4,8 +4,8 @@
 
 - name: check who am i
   shell: "jenkins-cli who-am-i"
-  sudo_user: jenkins
-  sudo: yes
+  become: yes
+  become_user: jenkins
   register: jenkins_who_am_i
   tags:
     - jenkins
