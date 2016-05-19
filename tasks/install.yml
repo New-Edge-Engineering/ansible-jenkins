@@ -1,0 +1,22 @@
+# Install server
+- name: ensure jenkins is installed
+  apt:
+    pkg=jenkins
+    state=latest
+    update_cache=yes
+  register: jenkins_install
+  notify:
+    - restart jenkins
+  tags:
+    - packages
+    - jenkins
+# Install packages plug-ins depend on
+- name: install package dependentices
+  apt:
+    pkg={{ item }}
+    state=latest
+  with_items: jenkins_package_dependencies
+  when: jenkins_package_dependencies|length > 0
+  tags:
+    - packages
+    - jenkins
