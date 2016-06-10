@@ -7,12 +7,13 @@
 - include: user.yml
 # Install cli
 - include: cli.yml
-# Update the installation
-- include: update.yml
-# Install plugins
+# Install/Update plugins
 - include: plugins.yml
   when: jenkins_plugins|length > 0
+# authentication
+- include: ldap.yml
+  when: jenkins_ldap == True
+
 # credentials
 - include: ssh.yml
-# git repository support
-- include: bitbucket.yml
+  when: jenkins_generate_ssh == True

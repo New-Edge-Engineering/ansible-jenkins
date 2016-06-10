@@ -1,0 +1,177 @@
+---
+# <hudson>
+  # <securityRealm class="hudson.security.HudsonPrivateSecurityRealm">
+    # <disableSignup>true</disableSignup>
+    # <enableCaptcha>false</enableCaptcha>
+  # </securityRealm>
+  # TO:
+  # <securityRealm class="hudson.security.LDAPSecurityRealm" plugin="ldap@1.12">
+    # <server>ldap://localhost</server>
+    # <rootDN>dc=newedgeengineering,dc=net</rootDN>
+    # <inhibitInferRootDN>false</inhibitInferRootDN>
+    # <userSearchBase>ou=people</userSearchBase>
+    # <userSearch>(&amp;(objectClass=inetOrgPerson)(uid={0}))</userSearch>
+    # <groupSearchBase>ou=groups</groupSearchBase>
+    # <groupMembershipStrategy class="jenkins.security.plugins.ldap.FromGroupSearchLDAPGroupMembershipStrategy">
+      # <filter>(&amp;(objectClass=groupOfNames)(member=uid={0},ou=people,dc=newedgeengineering,dc=net))</filter>
+    # </groupMembershipStrategy>
+    # <managerDN>cn=Manager,dc=newedgeengineering,dc=net</managerDN>
+    # <managerPasswordSecret>sTv9fxIxYdOJPOiZmM/Zp3HPTrIe3JtSgpygNp2P17Y=</managerPasswordSecret>
+    # <disableMailAddressResolver>true</disableMailAddressResolver>
+    # <displayNameAttributeName>displayname</displayNameAttributeName>
+    # <mailAddressAttributeName>mail</mailAddressAttributeName>
+    # <userIdStrategy class="jenkins.model.IdStrategy$CaseSensitive"/>
+    # <groupIdStrategy class="jenkins.model.IdStrategy$CaseSensitive"/>
+  # </securityRealm>
+# </hudson>
+
+- name: ldap | ensure supporting software libraries are installed
+  apt:
+    name: python-dev
+
+- name: ldap | ensure supporting python libraries are installed
+  pip:
+    name: lxml
+
+- name: ldap | ensure securityRealm has no childern
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/securityRealm/*
+    ensure: absent
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure securityRealm is <securityRealm class="hudson.security.LDAPSecurityRealm" plugin="ldap@1.12">
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/securityRealm
+    attribute: class
+    value: "hudson.security.LDAPSecurityRealm"
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure securityRealm is <securityRealm class="hudson.security.LDAPSecurityRealm" plugin="ldap@1.12">
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/securityRealm
+    attribute: plugin
+    value: "ldap@1.12"
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure the secret generating file exist on server
+  template:
+    dest: /tmp/secret.groovy
+    src: secret.groovy.j2
+    owner: jenkins
+    mode: 0644
+
+- name: ldap | encode manager password
+  command: jenkins-cli groovy /tmp/secret.groovy
+  become_user: jenkins
+  become: yes
+  register: jenkins_ldap_encrypted_bind_pass
+
+- name: ldap | ensure securityRealm has childern
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/securityRealm
+    add_children:
+      - server: "{{ jenkins_ldap_server|default('ldap://localhost') }}"
+      - rootDN: "{{ jenkins_ldap_root_dn|default('dc=example,dc=com')}}"
+      - inhibitInferRootDN: "false"
+      - userSearchBase: "{{ jenkins_ldap_user_dn|default('ou=people')}}"
+      - userSearch: "{{ jenkins_ldap_user_filter|default('uid={0}') }}"
+      - groupSearchBase: "{{ jenkins_ldap_group_dn|default('ou=groups') }}"
+      - groupMembershipStrategy: ""
+      - managerDN: "{{ jenkins_ldap_bind_user }}"
+      - managerPasswordSecret: "{{ jenkins_ldap_encrypted_bind_pass.stdout }}"
+      - disableMailAddressResolver: "false"
+      - displayNameAttributeName: "displayname"
+      - mailAddressAttributeName: "mail"
+      - userIdStrategy: ""
+      - groupIdStrategy: ""
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure securityRealm groupMembershipStrategy is <groupMembershipStrategy class="jenkins.security.plugins.ldap.FromGroupSearchLDAPGroupMembershipStrategy">
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/securityRealm/groupMembershipStrategy
+    attribute: class
+    value: "jenkins.security.plugins.ldap.FromGroupSearchLDAPGroupMembershipStrategy"
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure securityRealm groupMembershipStrategy has childern
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/securityRealm/groupMembershipStrategy
+    add_children:
+      - filter: ""
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure securityRealm groupMembershipStrategy filter is set
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/securityRealm/groupMembershipStrategy/filter
+    value: "{{ jenkins_ldap_group_filter|default('(& (cn={0}) (| (objectclass=groupOfNames) (objectclass=groupOfUniqueNames) (objectclass=posixGroup)))') }}"
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure securityRealm userIdStrategy is <userIdStrategy class="jenkins.model.IdStrategy$CaseSensitive"/>
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/securityRealm/userIdStrategy
+    attribute: class
+    value: "jenkins.model.IdStrategy$CaseSensitive"
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure securityRealm groupIdStrategy is <groupIdStrategy class="jenkins.model.IdStrategy$CaseSensitive"/>
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/securityRealm/groupIdStrategy
+    attribute: class
+    value: "jenkins.model.IdStrategy$CaseSensitive"
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure security is switched on
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/useSecurity
+    value: "true"
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap

@@ -1,7 +1,7 @@
 ---
-- name: CLI | Ensure jenkins has started
+- name: CLI | Ensure jenkins has started securely
   get_url:
-    url: "http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/cli/"
+    url: "http://{{ jenkins_cli_user }}:{{ jenkins_cli_pass }}@127.0.0.1:8080/cli/"
     dest: /dev/null
     validate_certs: no
   register: secure_jenkins_result
@@ -9,7 +9,7 @@
   retries: "8"
   delay: "15"
   changed_when: false
-  when: jenkins_install|changed and jenkins_secure_id is defined and jenkins_secure_api is defined
+  when: jenkins_install|changed and jenkins_cli_user is defined and jenkins_cli_pass is defined
   tags:
     - install
     - jenkins
@@ -24,7 +24,7 @@
   retries: "8"
   delay: "15"
   changed_when: false
-  when: jenkins_install|changed and jenkins_secure_id is not defined and jenkins_secure_api is not defined
+  when: jenkins_install|changed and jenkins_cli_user is not defined and jenkins_cli_pass is not defined
   tags:
     - install
     - jenkins
@@ -41,11 +41,11 @@
 # Get Jenkins CLI from localhost
 - name: CLI | Ensure jar is installed
   get_url:
-    url: "http://{{ jenkins_secure_id }}:{{ jenkins_secure_api }}@127.0.0.1:8080/jnlpJars/jenkins-cli.jar"
+    url: "http://{{ jenkins_cli_user }}:{{ jenkins_cli_pass }}@127.0.0.1:8080/jnlpJars/jenkins-cli.jar"
     dest: "{{ jenkins_cli_destination }}/"
     owner: jenkins
     mode: 0440
-  when: jenkins_secure_id is defined and jenkins_secure_api is defined
+  when: jenkins_cli_user is defined and jenkins_cli_pass is defined
   tags:
     - package
     - jenkins
@@ -56,7 +56,7 @@
     dest: "{{ jenkins_cli_destination }}/"
     owner: jenkins
     mode: 0440
-  when: jenkins_secure_id is not defined and jenkins_secure_api is not defined
+  when: jenkins_cli_user is not defined and jenkins_cli_pass is not defined
   tags:
     - package
     - jenkins

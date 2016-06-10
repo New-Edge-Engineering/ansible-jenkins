@@ -1,0 +1,33 @@
+---
+- name: check to see if jenkins 2.x
+  stat:
+    path: /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_initial_admin_password
+
+- name: read initial admin password
+  shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_initial_admin_password_value
+  when: jenkins_initial_admin_password.stat.exists == true
+
+- debug: var=jenkins_initial_admin_password_value.stdout
+
+- name: remove initial admin password to activate jenkins
+  file:
+    path: /var/lib/jenkins/secrets/initialAdminPassword
+    state: absent
+
+# - name: discover jenkins crumb when initial admin password exists
+  # uri:
+    # url: http://127.0.0.1:8080/crumbIssuer/api/json
+  # register: jenkins_crumb
+  # when: jenkins_initial_admin_password.stat.exists == true and jenkins_initial_admin_password_value.stdout|length > 0
+#
+# - debug: var=jenkins_crumb
+#
+# - name: unlock jenkins when initial admin password exists
+  # uri:
+    # body: "from=/&j_username=admin&j_password={{ initial_admin_password_value.stdout }}&Jenkins-Crumb={{ jenkins_crumb }}"
+    # method: POST
+    # url: http://127.0.0.1:8080/j_acegi_security_check
+    # status_code: 302
+  # when: initial_admin_password.stat.exists == true and initial_admin_password_value.stdout|length > 0
