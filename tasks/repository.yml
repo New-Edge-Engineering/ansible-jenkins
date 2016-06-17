@@ -1,17 +1,17 @@
 ---
-# Ubuntu LTS 12.04 version is out of date, therefore the updating to use 
+# Ubuntu LTS 12.04 version is out of date, therefore the updating to use
 # http://pkg.jenkins-ci.org/debian/
 
 # Add Jenkins repository key
 - name: Add jenkins apt-key
   apt_key:
-    url=http://pkg.jenkins-ci.org/debian/jenkins-ci.org.key
-    state=present
+    url: http://pkg.jenkins-ci.org/debian-stable/jenkins-ci.org.key
+    state: present
   sudo: yes
 
 # Add Jenkins repository
 - name: Add Jenkins repository
   apt_repository:
-    repo='deb http://pkg.jenkins-ci.org/debian binary/'
-    state=present
+    repo: 'deb http://pkg.jenkins-ci.org/debian-stable binary/'
+    state: present
   sudo: yes

@@ -25,13 +25,55 @@
   # </securityRealm>
 # </hudson>
 
+- name: ldap | check config.xml exists
+  stat:
+    path: /var/lib/jenkins/config.xml
+  register: jenkins_config
+
+- name: ldap | ensure config.xml exists when missing
+  file:
+    src: config.ml
+    dest: /var/lib/jenkins/config.xml
+    owner: jenkins
+    group: jenkins
+    mode: 0644
+  when: jenkins_config.stat.exists == false
+
+- name: ldap | ensure the secret generating file exist on server
+  template:
+    dest: /tmp/secret.groovy
+    src: secret.groovy.j2
+    owner: jenkins
+    mode: 0644
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | encode manager password
+  command: jenkins-cli groovy /tmp/secret.groovy
+  become_user: jenkins
+  become: yes
+  register: jenkins_ldap_encrypted_bind_pass
+  ignore_errors: true
+  tags:
+    - jenkins
+    - ldap
+
 - name: ldap | ensure supporting software libraries are installed
   apt:
     name: python-dev
+  when: jenkins_ldap_encrypted_bind_pass|success
+  tags:
+    - jenkins
+    - ldap
 
 - name: ldap | ensure supporting python libraries are installed
   pip:
     name: lxml
+  when: jenkins_ldap_encrypted_bind_pass|success
+  tags:
+    - jenkins
+    - ldap
 
 - name: ldap | ensure securityRealm has no childern
   xml:
@@ -40,6 +82,7 @@
     ensure: absent
   become_user: jenkins
   become: yes
+  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
@@ -52,6 +95,7 @@
     value: "hudson.security.LDAPSecurityRealm"
   become_user: jenkins
   become: yes
+  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
@@ -64,22 +108,10 @@
     value: "ldap@1.12"
   become_user: jenkins
   become: yes
+  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
-
-- name: ldap | ensure the secret generating file exist on server
-  template:
-    dest: /tmp/secret.groovy
-    src: secret.groovy.j2
-    owner: jenkins
-    mode: 0644
-
-- name: ldap | encode manager password
-  command: jenkins-cli groovy /tmp/secret.groovy
-  become_user: jenkins
-  become: yes
-  register: jenkins_ldap_encrypted_bind_pass
 
 - name: ldap | ensure securityRealm has childern
   xml:
@@ -102,6 +134,7 @@
       - groupIdStrategy: ""
   become_user: jenkins
   become: yes
+  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
@@ -114,6 +147,7 @@
     value: "jenkins.security.plugins.ldap.FromGroupSearchLDAPGroupMembershipStrategy"
   become_user: jenkins
   become: yes
+  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
@@ -126,6 +160,7 @@
       - filter: ""
   become_user: jenkins
   become: yes
+  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
@@ -137,6 +172,7 @@
     value: "{{ jenkins_ldap_group_filter|default('(& (cn={0}) (| (objectclass=groupOfNames) (objectclass=groupOfUniqueNames) (objectclass=posixGroup)))') }}"
   become_user: jenkins
   become: yes
+  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
@@ -149,6 +185,7 @@
     value: "jenkins.model.IdStrategy$CaseSensitive"
   become_user: jenkins
   become: yes
+  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
@@ -161,6 +198,7 @@
     value: "jenkins.model.IdStrategy$CaseSensitive"
   become_user: jenkins
   become: yes
+  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
@@ -172,6 +210,7 @@
     value: "true"
   become_user: jenkins
   become: yes
+  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
