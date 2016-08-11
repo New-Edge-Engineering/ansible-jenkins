@@ -45,7 +45,7 @@
     dest: "{{ jenkins_cli_destination }}/"
     owner: jenkins
     mode: 0440
-  when: jenkins_cli_user is defined and jenkins_cli_pass is defined
+  when: jenkins_cli_user is defined and jenkins_cli_user and jenkins_cli_pass is defined and jenkins_cli_pass
   tags:
     - package
     - jenkins

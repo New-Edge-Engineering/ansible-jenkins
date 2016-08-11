@@ -5,13 +5,13 @@
 # Add Jenkins repository key
 - name: Add jenkins apt-key
   apt_key:
-    url: http://pkg.jenkins-ci.org/debian-stable/jenkins-ci.org.key
+    url: http://pkg.jenkins.io/debian-stable/jenkins.io.key
     state: present
   sudo: yes
 
 # Add Jenkins repository
 - name: Add Jenkins repository
   apt_repository:
-    repo: 'deb http://pkg.jenkins-ci.org/debian-stable binary/'
+    repo: 'deb http://pkg.jenkins.io/debian-stable binary/'
     state: present
   sudo: yes
