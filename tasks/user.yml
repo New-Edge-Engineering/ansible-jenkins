@@ -1,9 +1,10 @@
 - name: add jenkins group
-  group: name=jenkins
+  group:
+    name: jenkins
   tags:
     - jenkins
 - name: add group to user
   user:
-    name=jenkins
-    append=yes
-    group=jenkins
+    name: jenkins
+    append: yes
+    group: jenkins

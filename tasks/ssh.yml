@@ -2,8 +2,12 @@
 # ssh key
 - name: generate a ssh key
   user:
-    name=jenkins
-    generate_ssh_key=yes
+    name: jenkins
+    generate_ssh_key: yes
+  register: user
   tags:
     - ssh
     - jenkins
+- name: ensure key is avaible to the rest of the role.
+  set_fact:
+    jenkins_ssh_key: "{{ user.ssh_public_key }}"

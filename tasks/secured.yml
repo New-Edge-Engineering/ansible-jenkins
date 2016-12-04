@@ -1,0 +1,135 @@
+---
+# Jenkins Version 2.x speific setup
+- name: secured | check config.xml exists
+  stat:
+    path: /var/lib/jenkins/config.xml
+  register: jenkins_config
+
+- name: secured | ensure supporting software libraries are installed
+  apt:
+    name: python-dev
+  when: jenkins_config.stat.exists == true
+
+- name: secured | ensure supporting python libraries are installed
+  pip:
+    name: lxml
+  when: jenkins_config.stat.exists == true
+
+- name: secured | ensure slaveAgentPort is set to random, i.e. <slaveAgentPort>0</slaveAgentPort>
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/slaveAgentPort
+    value: "0"
+  become: yes
+  become_user: jenkins
+  register: jenkins_slave_agent_port_updated
+  when: jenkins_config.stat.exists == true
+  tags:
+    - secured
+    - jenkins
+
+# Jenkin 2.x initial admin password
+# - name: secured | check to see if jenkins 2.x
+#   stat:
+#     path: /var/lib/jenkins/secrets/initialAdminPassword
+#   register: jenkins_initial_admin_password
+#   tags:
+#     - secured
+#     - jenkins
+
+# # Login either via initial admin password or existing user or ignore if forced/anonyous
+# - name: secured | ensure user is logged in using initial admin details
+#   command: "jenkins-cli login --username=admin --password-file=/var/lib/jenkins/secrets/initialAdminPassword"
+#   become: yes
+#   become_user: jenkins
+#   register: jenkins_admin_authenticated
+#   when: jenkins_initial_admin_password.stat.exists == true and jenkins_initial_admin_password.stat.exists == true
+#   tags:
+#     - secured
+#     - jenkins
+
+- name: secured | check admin ssh exists
+  xml:
+    file: "/var/lib/jenkins/users/{{ jenkins_admin_user|default('admin') }}/config.xml"
+    xpath: /user/properties/org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl/authorizedKeys
+    count: true
+  become: yes
+  become_user: jenkins
+  register: jenkins_admin_ssh_key_exists
+  tags:
+    - secured
+    - jenkins
+
+- name: secured | ensure admin user has cli node.
+  xml:
+    file: "/var/lib/jenkins/users/{{ jenkins_admin_user|default('admin') }}/config.xml"
+    xpath: /user/properties
+    add_children:
+      - org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl: ""
+  become: yes
+  become_user: jenkins
+  when: jenkins_admin_ssh_key_exists.count == 0
+  tags:
+    - secured
+    - jenkins
+
+- name: secured | ensure admin user has parent node for ssh keys.
+  xml:
+    file: "/var/lib/jenkins/users/{{ jenkins_admin_user|default('admin') }}/config.xml"
+    xpath: /user/properties/org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl
+    add_children:
+      - authorizedKeys: "{{ jenkins_ssh_key }}"
+  become: yes
+  become_user: jenkins
+  when: jenkins_admin_ssh_key_exists.count == 0
+  register: jenkins_admin_ssh_key
+  tags:
+    - secured
+    - jenkins
+
+# Jenkin 2.x initial admin password
+- name: secured | remove initial admin password to activate jenkins
+  file:
+    path: /var/lib/jenkins/secrets/initialAdminPassword
+    state: absent
+  register: jenkins_initial_admin_password_file
+  tags:
+    - secured
+    - jenkins
+
+- name: secured | copy jenkins.install.UpgradeWizard.state to jenkins.install.InstallUtil.lastExecVersion
+  copy:
+    dest: /var/lib/jenkins/jenkins.install.InstallUtil.lastExecVersion
+    src: /var/lib/jenkins/jenkins.install.UpgradeWizard.state
+    remote_src: true
+  become: yes
+  become_user: jenkins
+  register: jenkins_install_wizard_update
+  tags:
+    - secured
+    - jenkins
+
+- name: secured | restart jenkins for configuration to take effect
+  service:
+    name: jenkins
+    state: restarted
+  register: jenkins_restart_for_secure_items
+  when: jenkins_slave_agent_port_updated|changed or jenkins_admin_ssh_key|changed or jenkins_initial_admin_password_file|changed or jenkins_install_wizard_update|changed
+  tags:
+    - secured
+    - jenkins
+
+- name: secured | ensure jenkins has started
+  get_url:
+    url: http://127.0.0.1:8080/cli/
+    dest: /dev/null
+    validate_certs: no
+  when: jenkins_restart_for_secure_items|changed
+  register: jenkins_result
+  until: jenkins_result.msg.find("200 OK") != -1
+  retries: "8"
+  delay: "15"
+  changed_when: false
+  tags:
+    - secured
+    - jenkins

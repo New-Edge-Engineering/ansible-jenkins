@@ -16,7 +16,7 @@
 
 - name: CLI | Ensure jenkins has started
   get_url:
-    url: http://127.0.0.1:8080/cli/
+    url: http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar
     dest: /dev/null
     validate_certs: no
   register: jenkins_result
@@ -45,7 +45,7 @@
     dest: "{{ jenkins_cli_destination }}/"
     owner: jenkins
     mode: 0440
-  when: jenkins_cli_user is defined and jenkins_cli_user and jenkins_cli_pass is defined and jenkins_cli_pass
+  when: jenkins_cli_user is defined and jenkins_cli_pass is defined
   tags:
     - package
     - jenkins
@@ -56,6 +56,8 @@
     dest: "{{ jenkins_cli_destination }}/"
     owner: jenkins
     mode: 0440
+  become: yes
+  become_user: jenkins
   when: jenkins_cli_user is not defined and jenkins_cli_pass is not defined
   tags:
     - package

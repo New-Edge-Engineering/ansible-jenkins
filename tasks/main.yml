@@ -7,13 +7,14 @@
 - include: user.yml
 # Install cli
 - include: cli.yml
+# credentials
+- include: ssh.yml
+  when: jenkins_generate_ssh == True
+# Correct secured Jenkins
+- include: secured.yml
 # Install/Update plugins
 - include: plugins.yml
   when: jenkins_plugins|length > 0
 # authentication
 - include: ldap.yml
   when: jenkins_ldap == True
-
-# credentials
-- include: ssh.yml
-  when: jenkins_generate_ssh == True
