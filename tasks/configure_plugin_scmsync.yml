@@ -1,0 +1,165 @@
+---
+
+- name: configure plugin scm synchronization | ensure git saas public key exist in known hosts
+  known_hosts:
+    name: "{{ item }}"
+    key: "{{ lookup('pipe', 'ssh-keyscan -t rsa ' + item) }}"
+    state: present
+  become_user: jenkins
+  with_items: "{{ jenkins_git_saas }}"
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+- name: configure plugin scm synchronization | ensure sync configuration directoy exists
+  file:
+    path: "{{ jenkins_home }}/scm-sync-configuration"
+    owner: jenkins
+    group: jenkins
+    mode: 0755
+    state: directory
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+- name: configure plugin scm synchronization | ensure existing repository exists
+  git:
+    repo: "ssh://{{ jenkins_plugin_scmsync_repo_uri }}"
+    dest: "{{ jenkins_home }}/scm-sync-configuration/checkoutConfiguration"
+    update: no
+  become_user: jenkins
+  register: jenkins_scm_git_clone
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+- name: configure plugin scm synchronization | ensure scm-sync-configuration.xml exists
+  template:
+    dest: "{{ jenkins_home }}/scm-sync-configuration.xml"
+    src: scm-sync-configuration.xml.j2
+    owner: jenkins
+    group: jenkins
+    mode: 0644
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+# synchronise xml files
+- name: configure plugin scm synchronization | find xml files
+  find:
+    paths: "{{ jenkins_home }}/scm-sync-configuration/checkoutConfiguration"
+    patterns: "*.xml"
+  register: jenkins_scm_xml
+  when: jenkins_scm_git_clone|changed
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+- name: configure plugin scm synchronization | ensure xml files are in sync
+  copy:
+    backup: yes
+    dest: "{{ jenkins_home }}/"
+    group: jenkins
+    mode: 0655
+    owner: jenkins
+    remote_src: yes
+    src: "{{ item.path }}"
+  with_items: "{{ jenkins_scm_xml.files }}"
+  when: jenkins_scm_xml|changed
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+- name: configure plugin scm synchronization | find jobs
+  find:
+    paths: "{{ jenkins_home }}/scm-sync-configuration/checkoutConfiguration/jobs"
+    recurse: yes
+  register: jenkins_scm_jobs_xml
+  when: jenkins_scm_git_clone|changed
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+- name: configure plugin scm synchronization | ensure jobs directories exist
+  file:
+    group: jenkins
+    mode: 0755
+    owner: jenkins
+    path: "{{ jenkins_home }}/jobs/{{ (item.path[((jenkins_home+'/scm-sync-configuration/checkoutConfiguration/jobs/')|length):])|dirname }}"
+    state: directory
+  when: jenkins_scm_jobs_xml|changed
+  with_items: "{{ jenkins_scm_jobs_xml.files }}"
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+- name: configure plugin scm synchronization | ensure jobs are in sync
+  copy:
+    dest: "{{ jenkins_home }}/jobs/{{ item.path[((jenkins_home+'/scm-sync-configuration/checkoutConfiguration/jobs/')|length):] }}"
+    group: jenkins
+    mode: 0655
+    owner: jenkins
+    remote_src: yes
+    src: "{{ item.path }}"
+  when: jenkins_scm_jobs_xml|changed
+  with_items: "{{ jenkins_scm_jobs_xml.files }}"
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+- name: configure plugin scm synchronization | find users
+  find:
+    paths: "{{ jenkins_home }}/scm-sync-configuration/checkoutConfiguration/users"
+    recurse: yes
+  register: jenkins_scm_users_xml
+  when: jenkins_scm_git_clone|changed
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+- name: configure plugin scm synchronization | ensure users directories exist
+  file:
+    group: jenkins
+    mode: 0755
+    owner: jenkins
+    path: "{{ jenkins_home }}/users/{{ (item.path[((jenkins_home+'/scm-sync-configuration/checkoutConfiguration/users/')|length):])|dirname }}"
+    state: directory
+  when: jenkins_scm_users_xml|changed
+  with_items: "{{ jenkins_scm_users_xml.files }}"
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization
+
+- name: configure plugin scm synchronization | ensure users are in sync
+  copy:
+    dest: "{{ jenkins_home }}/users/{{ item.path[((jenkins_home+'/scm-sync-configuration/checkoutConfiguration/users/')|length):] }}"
+    group: jenkins
+    mode: 0655
+    owner: jenkins
+    remote_src: yes
+    src: "{{ item.path }}"
+  when: jenkins_scm_users_xml|changed
+  with_items: "{{ jenkins_scm_users_xml.files }}"
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+    - configuration
+    - scm-synchronization

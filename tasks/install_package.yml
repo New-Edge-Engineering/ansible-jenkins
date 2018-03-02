@@ -1,0 +1,124 @@
+---
+
+# Install server
+- name: install package | ensure jenkins is installed
+  package:
+    name: jenkins
+    state: latest
+  register: jenkins_install
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+    - install
+    - packages
+
+# Install packages plug-ins depend on
+- name: install package | ensure package dependentices are installed
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items: "{{ jenkins_package_dependencies }}"
+  when: jenkins_package_dependencies|length > 0
+  tags:
+    - jenkins
+    - install
+    - package
+
+# ensure jenkins group exists
+- name: install package | ensure jenkins process group exists
+  group:
+    name: jenkins
+  tags:
+    - jenkins
+    - install
+    - user
+
+- name: install package | ensure jenkins process user exists
+  user:
+    name: jenkins
+    append: yes
+    group: jenkins
+    shell: /bin/bash
+  tags:
+    - jenkins
+    - install
+    - user
+
+- name: install package | ensure .ssh directory exists
+  file:
+    group: jenkins
+    mode: 0755
+    owner: jenkins
+    path: "{{ jenkins_home_dir }}/.ssh"
+    state: directory
+
+- name: install package | create existing private ssh key
+  file:
+    content: "{{ jenkins_ssh_key }}"
+    group: jenkins
+    mode: 0600
+    owner: jenkins
+    path: "{{ jenkins_home_dir }}/.ssh/id_rsa"
+    state: present
+  register: jenkins_created_ssh_key
+  when: not (
+          (jenkins_ssh_key is undefined) or
+          (jenkins_ssh_key is none) or
+          (jenkins_ssh_key|trim == '')
+        )
+  tags:
+    - ssh
+    - jenkins
+
+- name: install package | copy existing private ssh key
+  copy:
+    dest: "{{ jenkins_home_dir }}/.ssh/id_rsa"
+    src: "{{ jenkins_path_for_private_ssh_key }}"
+    group: jenkins
+    mode: 0600
+    owner: jenkins
+  register: jenkins_copied_ssh_key
+  when: not(
+          (jenkins_path_for_private_ssh_key is undefined) or
+          (jenkins_path_for_private_ssh_key is none) or
+          (jenkins_path_for_private_ssh_key|trim == '')
+        ) and (
+          (jenkins_ssh_key is undefined) or
+          (jenkins_ssh_key is none) or
+          (jenkins_ssh_key|trim == '')
+        )
+  tags:
+    - ssh
+    - jenkins
+
+- name: install package | generate a ssh key
+  user:
+    name: jenkins
+    generate_ssh_key: yes
+    ssh_key_bits: 2048
+  register: jenkins_ssh_user
+  when: jenkins_ssh_key is undefined
+  tags:
+    - ssh
+    - jenkins
+
+- name:  install package | ensure key is avaible to the rest of the role.
+  set_fact:
+    jenkins_ssh_key: "{{ jenkins_ssh_user.ssh_public_key }}"
+  when: not((jenkins_ssh_user.ssh_public_key is undefined) or (jenkins_ssh_user.ssh_public_key is none) or (jenkins_ssh_user.ssh_public_key|trim == ''))
+
+- name: install package | generate public ssh key from private ssh key
+  shell: "ssh-keygen -y -f ~/.ssh/id_rsa"
+  become: yes
+  become_user: jenkins
+  register: jenkins_ssh_public_key
+  when: jenkins_ssh_key is undefined
+  tags:
+    - ssh
+    - jenkins
+
+- name:  install package | ensure key is avaible to the rest of the role.
+  set_fact:
+    jenkins_ssh_key: "{{ jenkins_ssh_public_key.stdout }}"
+  when: jenkins_ssh_public_key|changed

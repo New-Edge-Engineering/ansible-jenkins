@@ -3,15 +3,21 @@
 # http://pkg.jenkins-ci.org/debian/
 
 # Add Jenkins repository key
-- name: Add jenkins apt-key
+- name: install debian | ensure jenkins apt-key exists
   apt_key:
     url: http://pkg.jenkins.io/debian-stable/jenkins.io.key
     state: present
-  sudo: yes
+  tags:
+    - jenkins
+    - install
+    - repository
 
 # Add Jenkins repository
-- name: Add Jenkins repository
+- name: install debian | ensure jenkins debian repository exists
   apt_repository:
     repo: 'deb http://pkg.jenkins.io/debian-stable binary/'
     state: present
-  sudo: yes
+  tags:
+    - jenkins
+    - install
+    - repository

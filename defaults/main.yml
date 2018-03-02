@@ -3,8 +3,9 @@ jenkins_home: /var/lib/jenkins
 jenkins_cli_destination: /usr/share/jenkins
 jenkins_plugins: []
 jenkins_package_dependencies: []
-jenkins_cli_user:
-jenkins_cli_pass:
-jenkins_domain:
-jenkins_generate_ssh: true
+jenkins_cli_user: none
+jenkins_cli_pass: none
+jenkins_domain: none
 jenkins_ldap: false
+jenkins_users: []
+jenkins_path_for_private_ssh_key: none

@@ -1,0 +1,50 @@
+---
+- name: configure plugin git | ensure email is set for git config
+  git_config:
+    name: user.email
+    scope: global
+    value: "jenkins@{{ jenkins_email_fqdn }}"
+  become: yes
+  become_user: jenkins
+  tags:
+    - jenkins
+    - configuration
+    - git
+
+- name: configure plugin git | ensure email is set for git config
+  git_config:
+    name: user.name
+    scope: global
+    value: jenkins
+  become: yes
+  become_user: jenkins
+  tags:
+    - jenkins
+    - configuration
+    - git
+
+- name: configure plugin git | ensure email is set for git config
+  git_config:
+    name: push.default
+    scope: global
+    value: simple
+  become: yes
+  become_user: jenkins
+  tags:
+    - jenkins
+    - configuration
+    - git
+
+- name: configure plugin git | ensure hudson.plugins.git.GitSCM.xml exists
+  template:
+    dest: "{{ jenkins_home }}/hudson.plugins.git.GitSCM.xml"
+    src: hudson.plugins.git.GitSCM.xml.j2
+    owner: jenkins
+    group: jenkins
+    mode: 0644
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+    - configuration
+    - git

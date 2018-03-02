@@ -1,0 +1,33 @@
+---
+
+- name: Start Up Check | Ensure jenkins has started
+  get_url:
+    url: http://127.0.0.1:8080/cli/
+    dest: /tmp/delme
+    validate_certs: no
+  become: yes
+  become_user: jenkins
+  register: jenkins_cli_restart_result
+  until: jenkins_cli_restart_result.status_code is defined and (jenkins_cli_restart_result.status_code == 403 or jenkins_cli_restart_result.status_code == 200)
+  retries: "60"
+  delay: "5"
+  changed_when: false
+  ignore_errors: true
+  tags:
+    - install
+    - jenkins
+
+# Create Jenkins CLI destination directory
+- name: "create jenkins cli destination directory"
+  file:
+    path: "{{ jenkins_cli_destination }}"
+    owner: jenkins
+    state: directory
+  tags:
+    - package
+    - jenkins
+
+- name: Start Up Check | ensure tempory file does not exist
+  file:
+    path: /tmp/delme
+    state: absent

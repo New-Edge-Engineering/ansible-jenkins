@@ -50,7 +50,7 @@
     - ldap
 
 - name: ldap | encode manager password
-  command: jenkins-cli groovy /tmp/secret.groovy
+  shell: "cat /tmp/secret.groovy | jenkins-cli -ssh -user jenkins -i /var/lib/jenkins/.ssh/id_rsa groovy ="
   become_user: jenkins
   become: yes
   register: jenkins_ldap_encrypted_bind_pass
@@ -59,10 +59,18 @@
     - jenkins
     - ldap
 
-- name: ldap | ensure supporting software libraries are installed
+- name: ldap | ensure supporting software libraries are apt installed
   apt:
     name: python-dev
-  when: jenkins_ldap_encrypted_bind_pass|success
+  when: jenkins_ldap_encrypted_bind_pass|success and ansible_pkg_mgr == "apt"
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure supporting software libraries are yum installed
+  yum:
+    name: python-devel
+  when: jenkins_ldap_encrypted_bind_pass|success and ansible_pkg_mgr == "yum"
   tags:
     - jenkins
     - ldap
@@ -83,6 +91,8 @@
   become_user: jenkins
   become: yes
   when: jenkins_ldap_encrypted_bind_pass|success
+  notify:
+    - restart jenkins
   tags:
     - jenkins
     - ldap
@@ -96,6 +106,8 @@
   become_user: jenkins
   become: yes
   when: jenkins_ldap_encrypted_bind_pass|success
+  notify:
+    - restart jenkins
   tags:
     - jenkins
     - ldap
@@ -109,6 +121,8 @@
   become_user: jenkins
   become: yes
   when: jenkins_ldap_encrypted_bind_pass|success
+  notify:
+    - restart jenkins
   tags:
     - jenkins
     - ldap
@@ -135,6 +149,8 @@
   become_user: jenkins
   become: yes
   when: jenkins_ldap_encrypted_bind_pass|success
+  notify:
+    - restart jenkins
   tags:
     - jenkins
     - ldap
@@ -148,6 +164,8 @@
   become_user: jenkins
   become: yes
   when: jenkins_ldap_encrypted_bind_pass|success
+  notify:
+    - restart jenkins
   tags:
     - jenkins
     - ldap
@@ -161,6 +179,8 @@
   become_user: jenkins
   become: yes
   when: jenkins_ldap_encrypted_bind_pass|success
+  notify:
+    - restart jenkins
   tags:
     - jenkins
     - ldap
@@ -173,6 +193,8 @@
   become_user: jenkins
   become: yes
   when: jenkins_ldap_encrypted_bind_pass|success
+  notify:
+    - restart jenkins
   tags:
     - jenkins
     - ldap
@@ -186,6 +208,8 @@
   become_user: jenkins
   become: yes
   when: jenkins_ldap_encrypted_bind_pass|success
+  notify:
+    - restart jenkins
   tags:
     - jenkins
     - ldap
@@ -199,6 +223,8 @@
   become_user: jenkins
   become: yes
   when: jenkins_ldap_encrypted_bind_pass|success
+  notify:
+    - restart jenkins
   tags:
     - jenkins
     - ldap
@@ -211,6 +237,8 @@
   become_user: jenkins
   become: yes
   when: jenkins_ldap_encrypted_bind_pass|success
+  notify:
+    - restart jenkins
   tags:
     - jenkins
     - ldap

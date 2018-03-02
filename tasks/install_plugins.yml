@@ -1,0 +1,128 @@
+---
+# need to determine current admin user.
+- name: plugins | check to see if admin password file exists
+  stat:
+    path: /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_initial_admin_password
+
+- name: plugins | read initial admin password when file exists
+  shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_initial_admin_password_value
+  when: jenkins_initial_admin_password.stat.exists == true
+
+# set authentication string
+- name: plugins | ensure authentication fact is set when admin password file exists
+  set_fact:
+    jenkins_user_auth: "-auth admin:{{ jenkins_initial_admin_password_value.stdout }}"
+  when: jenkins_initial_admin_password_value|changed and not(
+          (jenkins_initial_admin_password_value is undefined) or
+          (jenkins_initial_admin_password_value is none) or
+          (jenkins_initial_admin_password_value|trim == '')
+        )
+  tags:
+    - plugins
+    - jenkins
+
+- name: plugins | ensure authentication fact is set when cli user and password are present
+  set_fact:
+    jenkins_user_auth: "-auth {{ jenkins_cli_user }}:{{ jenkins_cli_pass }}"
+  when: jenkins_initial_admin_password_value|skipped and
+        not(
+          (jenkins_cli_user is undefined) or
+          (jenkins_cli_user is none) or
+          (jenkins_cli_user|trim == '')
+        ) and not(
+          (jenkins_cli_pass is undefined) or
+          (jenkins_cli_pass is none) or
+          (jenkins_cli_pass|trim == '')
+        )
+  tags:
+    - plugins
+    - jenkins
+
+- name: plugins | ensure authentication fact is set when cli user and password are not present
+  set_fact:
+    jenkins_user_auth: "-ssh -user jenkins"
+  when: jenkins_initial_admin_password_value|skipped and
+        (
+          (jenkins_cli_user is undefined) or
+          (jenkins_cli_user is none) or
+          (jenkins_cli_user|trim == '')
+        ) and (
+          (jenkins_cli_pass is undefined) or
+          (jenkins_cli_pass is none) or
+          (jenkins_cli_pass|trim == '')
+        )
+  tags:
+    - plugins
+    - jenkins
+
+# Start the process of initialising the plugins
+- name: plugins | ensure jenkins updates folder exists.
+  file:
+    path: "{{ jenkins_home }}/updates"
+    owner: jenkins
+    group: jenkins
+    mode: 0755
+    state: directory
+  register: jenkins_plugins_folder_create
+
+- name: plugins | get jenkins updates information
+  shell: curl -L https://updates.jenkins-ci.org/update-center.json | sed '1d;$d' > "{{ jenkins_home }}/updates/default.json"
+  args:
+    creates: "{{ jenkins_home }}/updates/default.json"
+  register: jenkins_updates_download
+  tags:
+    - plugins
+    - jenkins
+
+- name: Permissions for default.json updates info.
+  file:
+    path: "{{ jenkins_home }}/updates/default.json"
+    owner: jenkins
+    group: jenkins
+    mode: 0755
+  when: jenkins_plugins_folder_create|changed or jenkins_updates_download|changed
+
+# Install plugins using authentication fact
+- name: plugins | get list of current installed plugins
+  shell: "jenkins-cli {{ jenkins_user_auth }} list-plugins | cut -f 1 -d ' '"
+  when: not(jenkins_user_auth | search('-ssh -user jenkins')) and jenkins_plugins is defined and jenkins_plugins|length > 0
+  register: jenkins_plugins_installed
+  tags:
+    - plugins
+    - jenkins
+
+- name: plugins | ensure missing plugins are installed
+  shell: "jenkins-cli {{ jenkins_user_auth }} install-plugin {{ item }}"
+  become: yes
+  become_user: jenkins
+  when: jenkins_plugins_installed|changed and jenkins_plugins_installed.stdout.find(item) == -1
+  with_items: "{{ jenkins_plugins }}"
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+    - plugins
+
+- name: plugins | list plugins to be updated
+  shell: jenkins-cli {{ jenkins_user_auth }} list-plugins | grep ')$' | cut -f 1 -d ' ' | sed ':a;N;$!ba;s/\n/ /g'
+  register: jenkins_plugins_updates
+  when: jenkins_user_auth is defined
+  tags:
+    - jenkins
+    - plugins
+
+- name: plugins | ensure all plugins are up to date
+  shell: "jenkins-cli {{ jenkins_user_auth }} install-plugin {{ jenkins_plugins_updates.stdout }}"
+  become: yes
+  become_user: jenkins
+  when: not((jenkins_plugins_updates.stdout is undefined) or (jenkins_plugins_updates.stdout is none) or (jenkins_plugins_updates.stdout|trim == ''))
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+    - plugins
+
+# - name: plugins | check who i am
+#   shell: "jenkins-cli {{ jenkins_user_auth|default('') }} who-am-i"

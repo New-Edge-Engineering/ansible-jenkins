@@ -1,0 +1,104 @@
+---
+
+- name: cli | ensure service has been started and enabled.
+  service:
+    name: jenkins
+    state: restarted
+    enabled: yes
+  tags:
+    - jenkins
+    - install
+    - cli
+
+- import_tasks: start-up-check.yml
+
+# No X-Jenkins-CLI2-Port
+# https://jenkins.io/doc/book/managing/cli/#no-x-jenkins-cli2-port
+- name: cli | check config.xml exists
+  stat:
+    path: /var/lib/jenkins/config.xml
+  register: jenkins_config
+
+- name: cli | ensure supporting software libraries are installed via apt
+  apt:
+    name: python-dev
+  when: jenkins_config.stat.exists == true and ansible_os_family == 'Debian'
+
+- name: cli | ensure supporting software libraries are installed via yum
+  yum:
+    name: python2-pip
+  when: jenkins_config.stat.exists == true and ansible_os_family == 'RedHat'
+
+- name: cli | ensure supporting python libraries are installed
+  pip:
+    name: lxml
+  when: jenkins_config.stat.exists == true
+
+- name: cli | ensure slaveAgentPort is set to random, i.e. <slaveAgentPort>0</slaveAgentPort>
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/slaveAgentPort
+    value: "0"
+  become: yes
+  become_user: jenkins
+  register: jenkins_slave_agent_port_updated
+  when: jenkins_config.stat.exists == true
+  tags:
+    - secured
+    - jenkins
+
+# Get Jenkins CLI from localhost
+- name: cli | ensure jar is installed
+  get_url:
+    url: http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar
+    dest: "{{ jenkins_cli_destination }}/"
+    owner: jenkins
+    mode: 0644
+  become: yes
+  become_user: jenkins
+  tags:
+    - jenkins
+    - install
+    - cli
+
+# Set up jenkins-cli executable script
+- name: cli | ensure jenkins-cli executable script exist
+  template:
+    dest: /usr/bin/jenkins-cli
+    src: jenkins-cli.j2
+    mode: 0755
+  tags:
+    - jenkins
+    - install
+    - cli
+
+- name: cli | ensure jenkins cli configuration directory exist
+  file:
+    path: /etc/jenkins
+    state: directory
+  tags:
+    - jenkins
+    - install
+    - cli
+
+- name: cli | ensure jenkins-cli configuration exist
+  copy:
+    dest: /etc/jenkins/cli.conf
+    src: cli.conf
+    mode: 0644
+  tags:
+    - jenkins
+    - install
+    - cli
+
+- name: cli | ensure jssh configuration exist
+  copy:
+    dest: /var/lib/jenkins/org.jenkinsci.main.modules.sshd.SSHD.xml
+    src: org.jenkinsci.main.modules.sshd.SSHD.xml
+    mode: 0644
+    owner: jenkins
+    group: jenkins
+  tags:
+    - jenkins
+    - install
+    - cli

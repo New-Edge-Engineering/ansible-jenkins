@@ -1,0 +1,48 @@
+---
+- name: install redhat | ensure jenkins yum repository exists
+  yum_repository:
+    name: "jenkins"
+    description: "Jenkins Continuous Integration"
+    baseurl: "http://pkg.jenkins.io/redhat-stable"
+    gpgcheck: "yes"
+    enabled: "yes"
+    state: "present"
+  tags:
+    - jenkins
+    - install
+    - repository
+
+- name: install redhat | ensire Jenkins repo GPG key exists
+  rpm_key:
+    state: present
+    key: "https://pkg.jenkins.io/redhat-stable/jenkins.io.key"
+  tags:
+    - jenkins
+    - install
+    - repository
+
+- name: install redhat | ensure dependencies are installed
+  package:
+    name:
+      -  libsemanage-python
+    state: installed
+  tags:
+    - jenkins
+    - install
+    - selinux
+
+- name: install redhat | ensure nginx can communicate to jenkins
+  seboolean:
+    name: httpd_can_network_connect
+    state: yes
+    persistent: yes
+  tags:
+    - jenkins
+    - install
+    - selinux
+
+# sudo vi /etc/sysconfig/jenkins
+#  JENKINS_JAVA_OPTIONS="-Djava.awt.headless=true"
+#  + JENKINS_JAVA_OPTIONS="$JENKINS_JAVA_OPTIONS -Djava.net.preferIPv4Stack=true"
+
+# tracd may need `sudo setsebool -P httpd_can_network_connect 1`

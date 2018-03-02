@@ -1,22 +1,10 @@
-# Install server
-- name: ensure jenkins is installed
-  apt:
-    pkg=jenkins
-    state=latest
-    update_cache=yes
-  register: jenkins_install
-  notify:
-    - restart jenkins
-  tags:
-    - packages
-    - jenkins
-# Install packages plug-ins depend on
-- name: install package dependentices
-  apt:
-    pkg={{ item }}
-    state=latest
-  with_items: jenkins_package_dependencies
-  when: jenkins_package_dependencies|length > 0
-  tags:
-    - packages
-    - jenkins
+---
+# Install repository
+- include_tasks: "install_repository_for_{{ ansible_os_family|lower }}.yml"
+# Install server and set up (user) and group
+- include_tasks: install_package.yml
+# Install cli
+- import_tasks: install_cli.yml
+# Install/Update plugins
+- include_tasks: install_plugins.yml
+  when: jenkins_plugins|length > 0

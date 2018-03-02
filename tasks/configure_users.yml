@@ -1,0 +1,200 @@
+---
+# create named admin user - jenkins
+- name: configure users | check if users exist
+  stat:
+    path: "{{ jenkins_home_dir }}/users/{{ item.name }}/config.xml"
+  register: configuration_for_users
+  with_items: "{{ jenkins_users_to_configure }}"
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | create basic users' configuration
+  file:
+    path: "{{ jenkins_home_dir }}/users/{{ item.item.name }}"
+    group: jenkins
+    mode: 0755
+    owner: jenkins
+    state: directory
+  when: item.stat.exists == False
+  with_items: "{{ configuration_for_users.results }}"
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | create basic users' configuration
+  template:
+    dest: "{{ jenkins_home_dir }}/users/{{ item.item.name }}/config.xml"
+    group: jenkins
+    mode: 0755
+    owner: jenkins
+    src: user.config.xml
+  when: item.stat.exists == False
+  with_items: "{{ configuration_for_users.results }}"
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | check if users ssh exist
+  xml:
+    file: "{{ jenkins_home_dir }}/users/{{ item.item.name }}/config.xml"
+    xpath: /user/properties/org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl/authorizedKeys
+    count: true
+  become: yes
+  become_user: jenkins
+  when: item.stat.exists == False
+  with_items: "{{ configuration_for_users.results }}"
+  register: jenkins_users_ssh_key_exists
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | ensure users' has cli node
+  xml:
+    file: "{{ jenkins_home_dir }}/users/{{ item.item.item.name }}/config.xml"
+    xpath: /user/properties
+    add_children:
+      - org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl: ""
+  become: yes
+  become_user: jenkins
+  when: item.item.stat.exists == False and item.count == 0
+  with_items: "{{ jenkins_users_ssh_key_exists.results }}"
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | ensure users' has parent node for ssh keys
+  xml:
+    file: "{{ jenkins_home_dir }}/users/{{ item.item.item.name }}/config.xml"
+    xpath: /user/properties/org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl
+    add_children:
+      - authorizedKeys: "{{ item.item.item.ssh_key }}"
+  become: yes
+  become_user: jenkins
+  when: item.item.stat.exists == False and item.count == 0 and item.item.item.ssh_key is defined
+  with_items: "{{ jenkins_users_ssh_key_exists.results }}"
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | ensure authorizationStrategy does not exist
+  xml:
+    file: "{{ jenkins_home_dir }}/config.xml"
+    xpath: /hudson/authorizationStrategy/@class
+    ensure: absent
+  become: yes
+  become_user: jenkins
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | ensure denyAnonymousReadAccess does not exist
+  xml:
+    file: "{{ jenkins_home_dir }}/config.xml"
+    xpath: /hudson/authorizationStrategy/denyAnonymousReadAccess
+    ensure: absent
+  become: yes
+  become_user: jenkins
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | ensure authorisation strategy is set
+  xml:
+    file: "{{ jenkins_home_dir }}/config.xml"
+    xpath: /hudson/authorizationStrategy
+    attribute: class
+    value: "hudson.security.ProjectMatrixAuthorizationStrategy"
+    ensure: present
+  become: yes
+  become_user: jenkins
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | ensure user has permissions
+  xml:
+    file: "{{ jenkins_home_dir }}/config.xml"
+    xpath: /hudson/authorizationStrategy
+    add_children:
+      - permission: "{{ item.1 }}:{{ item.0.item.name }}"
+  become: yes
+  become_user: jenkins
+  when: item.0.stat.exists == False
+  with_subelements:
+    - "{{ configuration_for_users.results }}"
+    - item.permissions
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | ensure isSetupComplete is true
+  xml:
+    file: "{{ jenkins_home_dir }}/config.xml"
+    xpath: /hudson/installState/isSetupComplete
+    value: "true"
+    ensure: present
+  become: yes
+  become_user: jenkins
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | ensure isSetupComplete is true
+  xml:
+    file: "{{ jenkins_home_dir }}/config.xml"
+    xpath: /hudson/installState/name
+    value: RESTART
+    ensure: present
+  become: yes
+  become_user: jenkins
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+# Jenkin 2.x remove default user password file.
+- name: configure users | remove initial admin password to activate jenkins
+  file:
+    path: "{{ jenkins_home_dir }}/secrets/initialAdminPassword"
+    state: absent
+  register: jenkins_initial_admin_password_file
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | copy jenkins.install.UpgradeWizard.state to jenkins.install.InstallUtil.lastExecVersion
+  copy:
+    dest: "{{ jenkins_home_dir }}/jenkins.install.InstallUtil.lastExecVersion"
+    src: "{{ jenkins_home_dir }}/jenkins.install.UpgradeWizard.state"
+    remote_src: true
+  become: yes
+  become_user: jenkins
+  register: jenkins_install_wizard_update
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | restart jenkins for configuration to take effect
+  service:
+    name: jenkins
+    state: restarted
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- import_tasks: start-up-check.yml
