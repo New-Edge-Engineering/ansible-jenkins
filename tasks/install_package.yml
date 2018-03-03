@@ -54,13 +54,12 @@
     state: directory
 
 - name: install package | create existing private ssh key
-  file:
+  copy:
     content: "{{ jenkins_ssh_key }}"
     group: jenkins
     mode: 0600
     owner: jenkins
-    path: "{{ jenkins_home_dir }}/.ssh/id_rsa"
-    state: present
+    dest: "{{ jenkins_home_dir }}/.ssh/id_rsa"
   register: jenkins_created_ssh_key
   when: not (
           (jenkins_ssh_key is undefined) or

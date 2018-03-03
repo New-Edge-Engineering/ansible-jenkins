@@ -76,7 +76,7 @@
     - plugins
     - jenkins
 
-- name: Permissions for default.json updates info.
+- name: plugins | ensure permissions for default.json are correct.
   file:
     path: "{{ jenkins_home }}/updates/default.json"
     owner: jenkins
@@ -87,7 +87,9 @@
 # Install plugins using authentication fact
 - name: plugins | get list of current installed plugins
   shell: "jenkins-cli {{ jenkins_user_auth }} list-plugins | cut -f 1 -d ' '"
-  when: not(jenkins_user_auth | search('-ssh -user jenkins')) and jenkins_plugins is defined and jenkins_plugins|length > 0
+  become: yes
+  become_user: jenkins
+  when: jenkins_plugins is defined and jenkins_plugins|length > 0
   register: jenkins_plugins_installed
   tags:
     - plugins
@@ -107,6 +109,8 @@
 
 - name: plugins | list plugins to be updated
   shell: jenkins-cli {{ jenkins_user_auth }} list-plugins | grep ')$' | cut -f 1 -d ' ' | sed ':a;N;$!ba;s/\n/ /g'
+  become: yes
+  become_user: jenkins
   register: jenkins_plugins_updates
   when: jenkins_user_auth is defined
   tags:

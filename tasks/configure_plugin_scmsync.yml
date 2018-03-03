@@ -98,7 +98,7 @@
     owner: jenkins
     path: "{{ jenkins_home }}/jobs/{{ (item.path[((jenkins_home+'/scm-sync-configuration/checkoutConfiguration/jobs/')|length):])|dirname }}"
     state: directory
-  when: jenkins_scm_jobs_xml|changed
+  when: jenkins_scm_jobs_xml is defined and jenkins_scm_jobs_xml.files is defined and jenkins_scm_jobs_xml.files|length > 0
   with_items: "{{ jenkins_scm_jobs_xml.files }}"
   tags:
     - jenkins
@@ -113,7 +113,7 @@
     owner: jenkins
     remote_src: yes
     src: "{{ item.path }}"
-  when: jenkins_scm_jobs_xml|changed
+  when: jenkins_scm_jobs_xml is defined and jenkins_scm_jobs_xml.files is defined and jenkins_scm_jobs_xml.files|length > 0
   with_items: "{{ jenkins_scm_jobs_xml.files }}"
   notify:
     - restart jenkins
@@ -140,7 +140,7 @@
     owner: jenkins
     path: "{{ jenkins_home }}/users/{{ (item.path[((jenkins_home+'/scm-sync-configuration/checkoutConfiguration/users/')|length):])|dirname }}"
     state: directory
-  when: jenkins_scm_users_xml|changed
+  when: jenkins_scm_users_xml is defined and jenkins_scm_users_xml.files is defined and jenkins_scm_users_xml.files|length > 0
   with_items: "{{ jenkins_scm_users_xml.files }}"
   tags:
     - jenkins
@@ -155,7 +155,7 @@
     owner: jenkins
     remote_src: yes
     src: "{{ item.path }}"
-  when: jenkins_scm_users_xml|changed
+  when: jenkins_scm_users_xml is defined and jenkins_scm_users_xml.files is defined and jenkins_scm_users_xml.files|length > 0
   with_items: "{{ jenkins_scm_users_xml.files }}"
   notify:
     - restart jenkins
