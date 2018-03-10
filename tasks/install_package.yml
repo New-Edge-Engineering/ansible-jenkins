@@ -70,27 +70,6 @@
     - ssh
     - jenkins
 
-- name: install package | copy existing private ssh key
-  copy:
-    dest: "{{ jenkins_home_dir }}/.ssh/id_rsa"
-    src: "{{ jenkins_path_for_private_ssh_key }}"
-    group: jenkins
-    mode: 0600
-    owner: jenkins
-  register: jenkins_copied_ssh_key
-  when: not(
-          (jenkins_path_for_private_ssh_key is undefined) or
-          (jenkins_path_for_private_ssh_key is none) or
-          (jenkins_path_for_private_ssh_key|trim == '')
-        ) and (
-          (jenkins_ssh_key is undefined) or
-          (jenkins_ssh_key is none) or
-          (jenkins_ssh_key|trim == '')
-        )
-  tags:
-    - ssh
-    - jenkins
-
 - name: install package | generate a ssh key
   user:
     name: jenkins
