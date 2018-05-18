@@ -1,16 +1,14 @@
 ---
+# git plugin
+- import_tasks: configure_plugin_git.yml
+  when: jenkins_git == True
+# configuration backup plugin
+- import_tasks: configure_plugin_scmsync.yml
+  when: '"scm-sync-configuration" in jenkins_plugins'
 # users
 - include_tasks: configure_users.yml
   vars:
     jenkins_users_to_configure: "{{ [ jenkins_user ] + jenkins_users }}"
-
-# plugins
-# git
-- import_tasks: configure_plugin_git.yml
-  when: jenkins_git == True
-#  configuration backup
-- import_tasks: configure_plugin_scmsync.yml
-  when: '"scm-sync-configuration" in jenkins_plugins'
-#  authentication
+# authentication plugin
 - import_tasks: configure_plugin_ldap.yml
   when: jenkins_ldap == True

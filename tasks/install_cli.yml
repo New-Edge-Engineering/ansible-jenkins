@@ -47,6 +47,16 @@
     - secured
     - jenkins
 
+# Create Jenkins CLI destination directory
+- name: "create jenkins cli destination directory"
+  file:
+    path: "{{ jenkins_cli_destination }}"
+    owner: jenkins
+    state: directory
+  tags:
+    - package
+    - jenkins
+
 # Get Jenkins CLI from localhost
 - name: cli | ensure jar is installed
   get_url:

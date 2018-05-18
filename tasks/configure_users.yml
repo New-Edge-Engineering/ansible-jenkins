@@ -10,7 +10,7 @@
     - configuration
     - user
 
-- name: configure users | create basic users' configuration
+- name: configure users | create basic users' path
   file:
     path: "{{ jenkins_home_dir }}/users/{{ item.item.name }}"
     group: jenkins
@@ -24,7 +24,7 @@
     - configuration
     - user
 
-- name: configure users | create basic users' configuration
+- name: configure users | create basic users' configuration file
   template:
     dest: "{{ jenkins_home_dir }}/users/{{ item.item.name }}/config.xml"
     group: jenkins
@@ -102,6 +102,21 @@
     ensure: absent
   become: yes
   become_user: jenkins
+  register:
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | ensure unsecured authorisation strategy does not exist
+  xml:
+    file: "{{ jenkins_home_dir }}/config.xml"
+    xpath: /hudson/authorizationStrategy
+    attribute: class
+    value: "hudson.security.AuthorizationStrategy$Unsecured"
+    ensure: absent
+  become: yes
+  become_user: jenkins
   tags:
     - jenkins
     - configuration
@@ -133,6 +148,38 @@
   with_subelements:
     - "{{ configuration_for_users.results }}"
     - item.permissions
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- name: configure users | read current users' permissions
+  xml:
+    file: "{{ jenkins_home_dir }}/config.xml"
+    xpath: /hudson/authorizationStrategy/permission
+    count: yes
+  register: users_permissions
+  become: yes
+  become_user: jenkins
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- debug: var=users_permissions
+
+- name: configure users | ensure all users' have permissions
+  xml:
+    file: "{{ jenkins_home_dir }}/config.xml"
+    xpath: /hudson/authorizationStrategy
+    add_children:
+      - permission: "{{ item.1 }}:{{ item.0.name }}"
+  become: yes
+  become_user: jenkins
+  when: users_permissions.count == 0
+  with_subelements:
+    - "{{ jenkins_users_to_configure }}"
+    - permissions
   tags:
     - jenkins
     - configuration

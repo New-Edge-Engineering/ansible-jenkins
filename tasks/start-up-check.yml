@@ -17,16 +17,6 @@
     - install
     - jenkins
 
-# Create Jenkins CLI destination directory
-- name: "create jenkins cli destination directory"
-  file:
-    path: "{{ jenkins_cli_destination }}"
-    owner: jenkins
-    state: directory
-  tags:
-    - package
-    - jenkins
-
 - name: Start Up Check | ensure tempory file does not exist
   file:
     path: /tmp/delme

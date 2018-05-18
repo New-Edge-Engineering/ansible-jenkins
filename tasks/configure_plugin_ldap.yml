@@ -1,4 +1,27 @@
 ---
+- name: ldap | ensure supporting software libraries are apt installed
+  apt:
+    name: python-dev
+  when: ansible_pkg_mgr == "apt"
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure supporting software libraries are yum installed
+  yum:
+    name: python-devel
+  when: ansible_pkg_mgr == "yum"
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | ensure supporting python libraries are installed
+  pip:
+    name: lxml
+  tags:
+    - jenkins
+    - ldap
+
 # <hudson>
   # <securityRealm class="hudson.security.HudsonPrivateSecurityRealm">
     # <disableSignup>true</disableSignup>
@@ -29,6 +52,9 @@
   stat:
     path: /var/lib/jenkins/config.xml
   register: jenkins_config
+  tags:
+    - jenkins
+    - ldap
 
 - name: ldap | ensure config.xml exists when missing
   file:
@@ -38,6 +64,50 @@
     group: jenkins
     mode: 0644
   when: jenkins_config.stat.exists == false
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | check securityRealm
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/securityRealm
+    content: attribute
+    attribute: class
+  register: security_realm_found
+  become_user: jenkins
+  become: yes
+  tags:
+    - jenkins
+    - ldap
+
+- debug: var=security_realm_found
+
+- name: ldap | ensure security is switched off when security realm is not LDAP
+  xml:
+    file: /var/lib/jenkins/config.xml
+    xpath: /hudson/useSecurity
+    value: "false"
+  become_user: jenkins
+  become: yes
+  when: security_realm_found['matches']|length > 0 and "hudson.security.LDAPSecurityRealm" not in security_realm_found['matches'][0]['securityRealm']['class']
+  register: security_realm_changed
+  tags:
+    - jenkins
+    - ldap
+
+- name: ldap | restart jenkins for configuration to take effect
+  service:
+    name: jenkins
+    state: restarted
+  when: security_realm_changed
+  tags:
+    - jenkins
+    - configuration
+    - user
+
+- import_tasks: start-up-check.yml
+  when: security_realm_changed
 
 - name: ldap | ensure the secret generating file exist on server
   template:
@@ -55,30 +125,6 @@
   become: yes
   register: jenkins_ldap_encrypted_bind_pass
   ignore_errors: true
-  tags:
-    - jenkins
-    - ldap
-
-- name: ldap | ensure supporting software libraries are apt installed
-  apt:
-    name: python-dev
-  when: jenkins_ldap_encrypted_bind_pass|success and ansible_pkg_mgr == "apt"
-  tags:
-    - jenkins
-    - ldap
-
-- name: ldap | ensure supporting software libraries are yum installed
-  yum:
-    name: python-devel
-  when: jenkins_ldap_encrypted_bind_pass|success and ansible_pkg_mgr == "yum"
-  tags:
-    - jenkins
-    - ldap
-
-- name: ldap | ensure supporting python libraries are installed
-  pip:
-    name: lxml
-  when: jenkins_ldap_encrypted_bind_pass|success
   tags:
     - jenkins
     - ldap
